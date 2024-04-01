@@ -1,7 +1,7 @@
 <template>
-	<ULink to="/">
+	<!-- <ULink to="/">
 		<UButton icon="i-heroicons-arrow-left" variant="link" color="white">Back</UButton>
-	</ULink>
+	</ULink> -->
 	<div class="flex justify-center text-3xl">{{ server?.server_name }}</div>
 	<UTabs
 		class="pt-4"
@@ -13,7 +13,6 @@
 	<ClientOnly>
 		<div v-if="user?.id === server?.owner_uuid">
 			<div class="flex justify-center space-x-6 pt-4">
-				<div class="AAA"></div>
 				<UButton @click="openUpdateOJNModal" icon="i-heroicons-cloud-arrow-up">Upload OJN</UButton>
 				<UButton @click="selectOJNList" icon="i-heroicons-cloud-arrow-up" color="green">
 					<span v-if="channels?.length! > 0">Update/Create OJN List</span>
@@ -36,7 +35,7 @@
 	<form ref="formOJNList">
 		<input type="file" @change="onInputChange" hidden ref="fileOJNListInput" />
 	</form>
-	<div class="flex flex-col" v-if="channels?.length! > 1">
+	<!-- <div class="flex flex-col" v-if="channels?.length! > 1">
 		<span> Channel: {{ channels![selectedChannel].channel_name }}</span>
 		<span v-if="ojnlist"> Song Count: {{ ojnlist.count }}</span>
 
@@ -44,10 +43,34 @@
 			List updated at:
 			{{ new Date(channels![selectedChannel].updated_at).toLocaleString() }}</span
 		>
+	</div> -->
+
+	<!-- <div class="px-3 py-3.5 border-b border-gray-200 dark:border-gray-700">
+		<UInput
+			v-model="search"
+			icon="i-heroicons-magnifying-glass"
+			placeholder="Search Name, Artist, Note Charter, Level, BPM"
+			size="xl"
+			autofocus
+		/>
+	</div> -->
+	<div class="flex justify-between flex-col md:flex-row space-x-4">
+		<UInput
+			v-model="search"
+			icon="i-heroicons-magnifying-glass"
+			placeholder="Search Name, Artist, Note Charter, Level, BPM"
+			size="xl"
+			autofocus
+			class="grow"
+		/>
+		<div class="flex items-center space-x-4 justify-center pt-4 md:pt-0">
+			<UBadge color="green">{{ ojnlist?.count || 0 }} Charts</UBadge>
+			<UBadge>Updated: {{ new Date(channels![selectedChannel].updated_at).toLocaleString() }}</UBadge>
+		</div>
 	</div>
 	<UTable
 		class="pt-4"
-		:rows="ojnlist?.ojnlists"
+		:rows="filteredRows"
 		:columns="ojnColumns"
 		:loading-state="{ icon: 'i-heroicons-arrow-path-20-solid', label: 'Loading...' }"
 		:loading="pendingList"
@@ -116,7 +139,7 @@
 				<template #footer>
 					<UButton
 						v-if="selectedTab == 0"
-						:disabled="disabled"
+						:disabled="loading"
 						:loading="loading"
 						size="xl"
 						icon="i-heroicons-cloud-arrow-up"
@@ -127,7 +150,7 @@
 					</UButton>
 					<UButton
 						v-else
-						:disabled="disabled"
+						:disabled="loading"
 						:loading="loading"
 						size="xl"
 						icon="i-heroicons-document-plus"
@@ -316,7 +339,6 @@ const selectedChannel = ref(Number(route.query.channel) || 0)
 
 const updateOJNListModal = ref(false)
 const updatingOJNList = ref<OJNList>()
-const disabled = ref(false)
 
 const uploadOJNModal = ref(false)
 const fileOJNInput = ref<File[]>()
@@ -425,6 +447,20 @@ const channelTabs = computed(() => {
 			label: chan.channel_name
 		}))
 	}
+})
+
+const search = ref('')
+
+const filteredRows = computed(() => {
+	if (!search.value) {
+		return ojnlist.value?.ojnlists
+	}
+
+	return ojnlist.value?.ojnlists.filter((ojn) => {
+		return Object.values(ojn).some((value) => {
+			return String(value).toLowerCase().includes(search.value.toLowerCase())
+		})
+	})
 })
 
 const {
@@ -590,7 +626,6 @@ const openUpdateOJNModal = () => {
 }
 
 const createChannel = async () => {
-	disabled.value = true
 	loading.value = true
 	const formData = new FormData()
 	formData.append('server_id', String(server?.id))
@@ -608,7 +643,6 @@ const createChannel = async () => {
 	} catch (e: any) {
 		toast.add({ title: e, icon: 'i-heroicons-x-circle-solid', color: 'red' })
 	}
-	disabled.value = false
 	loading.value = false
 }
 
@@ -651,7 +685,6 @@ const closeRenameModal = () => {
 const deleteChannel = async () => {
 	if (state.channel === `${server?.server_name}/${channels.value![selectedChannel.value].channel_name}`) {
 		loading.value = true
-		disabled.value = true
 		await $fetch(`/api/channel/${channels.value![selectedChannel.value].id}`, {
 			method: 'DELETE',
 			query: {
@@ -667,7 +700,6 @@ const deleteChannel = async () => {
 		alert('NOT CORRECT')
 	}
 	loading.value = false
-	disabled.value = false
 	router.push({ query: { channel: 0 } })
 	selectedChannel.value = 0
 	ojnlist.value = undefined
