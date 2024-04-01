@@ -6,7 +6,7 @@ import { getTimestampInSeconds } from '~/utils/time'
 export default defineEventHandler(async (event) => {
 	const clientBox = boxClient()
 	const clientSupabase = await serverSupabaseClient<Database>(event)
-	// const id = getRouterParam(event, 'id')
+
 	const body: RenameBodyRequest = await readBody(event)
 
 	if (body.type === 'channel') {

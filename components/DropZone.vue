@@ -11,7 +11,6 @@
 </template>
 
 <script setup>
-// import { ref, onMounted, onUnmounted } from 'vue'
 const emit = defineEmits(['files-dropped'])
 
 let active = ref(false)

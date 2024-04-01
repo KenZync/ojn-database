@@ -4,10 +4,6 @@ export default defineNuxtConfig({
 	modules: ['@nuxt/ui', '@nuxtjs/supabase', '@vee-validate/nuxt'],
 	supabase: {
 		redirect: false
-		// redirectOptions: {
-		//   login: '/',
-		//   callback: '/confirm'
-		// }
 	},
 	tailwindcss: {
 		exposeConfig: true

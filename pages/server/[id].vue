@@ -789,7 +789,5 @@ const downloadChart = async (header: OJNHeader) => {
 			timeout: 0
 		})
 	}
-
-	// loading.value = false
 }
 </script>
