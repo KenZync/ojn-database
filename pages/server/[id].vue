@@ -1,13 +1,13 @@
 <template>
 	<div class="flex justify-center text-3xl space-x-0 md:space-x-4 space-y-4 md:space-y-0 flex-col md:flex-row">
 		<div class="text-center">{{ server?.server_name }}</div>
-		<UButton :loading="loading" @click="download" icon="i-heroicons-arrow-down-tray" v-if="ojnlist"
+		<UButton :loading="loading" @click="downloadAll" icon="i-heroicons-arrow-down-tray" v-if="server"
 			>Download <span class="font-bold">ALL</span> Charts</UButton
 		>
 	</div>
 	<UTabs
 		class="pt-4"
-		v-if="!loading && channels?.length! > 0"
+		v-if="channels?.length! > 0"
 		:items="channelTabs"
 		v-model="selectedChannel"
 		@change="onChannelChange"
@@ -51,11 +51,17 @@
 		:loading-state="{ icon: 'i-heroicons-arrow-path-20-solid', label: 'Loading...' }"
 		:loading="pendingList"
 		:ui="{ td: { base: '', color: 'text-black dark:text-gray-200' } }"
-		@select="openOJNViewer"
 	>
+		<template #view-data="{ row }">
+			<UButton variant="ghost" icon="i-heroicons-eye-solid" @click="openOJNViewer(row)" />
+		</template>
+		<template #download-data="{ row }">
+			<UButton variant="ghost" icon="i-heroicons-arrow-down-tray" @click="downloadChart(row)" />
+		</template>
 	</UTable>
 
 	<UModal v-model="updateOJNListModal" :prevent-close="loading">
+		{{ `${Math.floor(Date.now() / 1000)}` }}
 		<UForm :schema="schema" :state="state" @submit="createChannel">
 			<UCard>
 				<template #header>
@@ -367,6 +373,14 @@ const ojnColumns = [
 		key: 'bpm',
 		label: 'BPM',
 		sortable: true
+	},
+	{
+		label: 'View',
+		key: 'view'
+	},
+	{
+		label: 'DL',
+		key: 'download'
 	}
 ]
 
@@ -566,7 +580,7 @@ const updateOJN = async () => {
 	now.value = 0
 	loading.value = true
 
-	const limit = pLimit(10)
+	const limit = pLimit(20)
 
 	const asyncOperation = (ojn: File) => {
 		return new Promise<void>(async (resolve) => {
@@ -575,17 +589,18 @@ const updateOJN = async () => {
 			try {
 				await $fetch(`/api/ojn/${server?.folder_id}`, {
 					method: 'POST',
-					body: formData
+					body: formData,
+					retry: 10
 				})
 				now.value++
 				resolve()
 			} catch (e) {
 				toast.add({
-					title: `Uploading ${ojn.name} failed.`,
+					title: `Uploading ${ojn.name} failed. ${e}`,
 					icon: 'i-heroicons-x-circle-16-solid',
-					color: 'red'
+					color: 'red',
+					timeout: 0
 				})
-				alert(e)
 			}
 		})
 	}
@@ -636,9 +651,7 @@ const onChannelChange = (index: number) => {
 
 const openOJNViewer = (e: OJNHeader) => {
 	navigateTo(`https://ojn.kenzync.dev/?id=${e.song_id}&server=ojn&folder=${server?.folder_id}`, {
-		open: {
-			target: '_blank'
-		}
+		external: true
 	})
 }
 
@@ -726,7 +739,7 @@ const renameChannel = async () => {
 	loading.value = false
 }
 
-const download = async () => {
+const downloadAll = async () => {
 	loading.value = true
 	let body = {
 		name: server?.server_name
@@ -742,5 +755,36 @@ const download = async () => {
 		}
 	})
 	loading.value = false
+}
+
+const downloadChart = async (header: OJNHeader) => {
+	toast.add({
+		title: `Downloading Lv.${header.difficulty.hard.level} ${header.title}`,
+		icon: 'i-heroicons-check-circle-solid',
+		color: 'green'
+	})
+
+	try {
+		const response = await $fetch(`/api/download/chart/${server?.folder_id}`, {
+			method: 'POST',
+			body: {
+				id: header.song_id,
+				file_name: `${server?.server_name}_${header.difficulty.hard.level}_${header.title}_o2ma${header.song_id}`
+			}
+		})
+
+		if (response.download_url) {
+			navigateTo(response.download_url, { external: true })
+		}
+	} catch (e) {
+		toast.add({
+			title: `Failed downloading ${header.song_id} ${e}`,
+			icon: 'i-heroicons-x-circle-16-solid',
+			color: 'red',
+			timeout: 0
+		})
+	}
+
+	// loading.value = false
 }
 </script>

@@ -62,9 +62,7 @@
 					</UFormGroup>
 					<UFormGroup label="OJN List" name="file" required>
 						<input type="file" @change="onInputChange" />
-						<!-- <UInput size="md" type="file"></UInput> -->
 						Song Count : {{ state.count }}
-						<!-- <input type="file" @change="onInputChange" /> -->
 					</UFormGroup>
 				</div>
 				<template #footer>

@@ -23,8 +23,13 @@ export default defineEventHandler(async (event) => {
 			ancestor_folder_ids: id!,
 			limit: 1
 		})
+
+		if (search.total_count == 0) {
+			throw createError({ statusCode: 404, statusMessage: 'Already Uploaded' })
+		}
+
 		const [firstEntry] = search.entries
-		if (firstEntry.name != ojn_name) {
+		if (firstEntry.name != ojn_name || search.total_count == 0) {
 			throw createError({ statusCode: 404, statusMessage: 'OJN Not Found' })
 		}
 
