@@ -1,18 +1,11 @@
 <template>
-	<div class="flex justify-center text-3xl">OJN Database</div>
-	<ClientOnly>
-		<UButton v-if="!user" @click="signInWithDiscord">Login With Discord</UButton>
-		<UButton v-if="user" @click="signOut"> Logout </UButton>
-		<div v-if="user">
-			Welcome {{ user.user_metadata.custom_claims.global_name }}
-			<UButton @click="openCreateServerModal"> Create Server </UButton>
-		</div>
-	</ClientOnly>
-
-	<div class="">Server Lists</div>
-
 	<div class="flex flex-col space-y-6">
-		<ULink v-for="server in servers" :to="`server/${server.id}`">
+		<div v-if="user">
+			<UButton @click="openCreateServerModal" block color="green" icon="i-heroicons-plus" size="xl">
+				Create Server
+			</UButton>
+		</div>
+		<ULink v-if="serverList" v-for="server in serverList" :to="`server/${server.id}`">
 			<UCard :ui="{ background: 'bg-blue-500' }">
 				<div class="flex justify-center space-x-4">
 					<div class="">{{ server.server_name }}</div>
@@ -20,6 +13,16 @@
 				</div>
 			</UCard>
 		</ULink>
+
+		<div v-else class="flex flex-col space-y-6">
+			<USkeleton class="h-20 w-full" />
+			<USkeleton class="h-20 w-full" />
+			<USkeleton class="h-20 w-full" />
+			<USkeleton class="h-20 w-full" />
+			<USkeleton class="h-20 w-full" />
+			<USkeleton class="h-20 w-full" />
+			<USkeleton class="h-20 w-full" />
+		</div>
 	</div>
 	<UModal v-model="createServerModal" :prevent-close="loading">
 		<UForm :schema="schema" :state="state" @submit="onSubmit">
@@ -93,22 +96,16 @@ useHead({
 const client = useSupabaseClient<Database>()
 const user = useSupabaseUser()
 
-const { data: servers } = await client.from('ojn_servers').select().order('id', { ascending: true })
-
 const loading = ref(false)
 const createServerModal = ref(false)
 const disabled = ref(true)
 
-const openCreateServerModal = () => {
-	state.server = ''
-	state.channel = ''
-	state.file = new ArrayBuffer(0)
-	state.file_name = ''
-	fileOJNList.value = new File([], '')
-	state.count = 0
-	createServerModal.value = true
-	disabled.value = true
-}
+const serverList = ref()
+
+onMounted(async () => {
+	const { data: servers } = await client.from('ojn_servers').select().order('id', { ascending: true })
+	serverList.value = servers
+})
 
 const state = reactive({
 	server: '',
@@ -120,26 +117,22 @@ const state = reactive({
 
 const fileOJNList = ref<File>()
 
-const signInWithDiscord = async () => {
-	const { error } = await client.auth.signInWithOAuth({
-		provider: 'discord',
-		options: {
-			redirectTo: 'https://ojn-database.kenzync.dev/'
-		}
-	})
-	if (error) console.log(error)
-}
-
-const signOut = async () => {
-	const { error } = await client.auth.signOut()
-	if (error) console.log(error)
-}
-
 const schema = yup.object({
 	server: yup.string().required('Required'),
 	channel: yup.string().required('Required'),
 	file: yup.mixed().required('File is required')
 })
+
+const openCreateServerModal = () => {
+	state.server = ''
+	state.channel = ''
+	state.file = new ArrayBuffer(0)
+	state.file_name = ''
+	fileOJNList.value = new File([], '')
+	state.count = 0
+	createServerModal.value = true
+	disabled.value = true
+}
 
 const onInputChange = async (e: any) => {
 	const input = e.target as HTMLInputElement

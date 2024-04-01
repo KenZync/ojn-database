@@ -1,6 +1,6 @@
 <template>
 	<ULink to="/">
-		<UButton icon="i-heroicons-arrow-left">Back</UButton>
+		<UButton icon="i-heroicons-arrow-left" variant="link" color="white">Back</UButton>
 	</ULink>
 	<div class="flex justify-center text-3xl">{{ server?.server_name }}</div>
 	<UTabs
@@ -13,6 +13,7 @@
 	<ClientOnly>
 		<div v-if="user?.id === server?.owner_uuid">
 			<div class="flex justify-center space-x-6 pt-4">
+				<div class="AAA"></div>
 				<UButton @click="openUpdateOJNModal" icon="i-heroicons-cloud-arrow-up">Upload OJN</UButton>
 				<UButton @click="selectOJNList" icon="i-heroicons-cloud-arrow-up" color="green">
 					<span v-if="channels?.length! > 0">Update/Create OJN List</span>
@@ -22,9 +23,7 @@
 					>Remove Channel</UButton
 				>
 				<!-- <UButton color="red" icon="i-heroicons-trash">Remove Server</UButton> -->
-				<form ref="formOJNList">
-					<input type="file" @change="onInputChange" hidden ref="fileOJNListInput" />
-				</form>
+
 				<!-- <UButton @click="openAddChannelModal" color="green">Add Channel</UButton> -->
 				<!-- <UButton color="yellow">Rename Server</UButton>
 				<UButton color="yellow">Rename Channel</UButton>
@@ -33,6 +32,9 @@
 			</div>
 		</div>
 	</ClientOnly>
+	<form ref="formOJNList">
+		<input type="file" @change="onInputChange" hidden ref="fileOJNListInput" />
+	</form>
 	<div class="flex flex-col" v-if="channels?.length! > 1">
 		<span> Channel: {{ channels![selectedChannel].channel_name }}</span>
 		<span v-if="ojnlist"> Song Count: {{ ojnlist.count }}</span>
@@ -331,14 +333,12 @@ const items = [
 	{
 		key: 'update',
 		label: 'Update',
-		// content: 'This is the content shown for Tab1',
 		icon: 'i-heroicons-cloud-arrow-up-solid',
 		disabled: channels?.value!.length === 0
 	},
 	{
 		key: 'Create',
 		label: 'Create',
-		// content: 'Finally, this is the content for Tab3',
 		icon: 'i-heroicons-document-plus-solid'
 	}
 ]
