@@ -12,7 +12,7 @@
 	/>
 	<ClientOnly>
 		<div v-if="user?.id === server?.owner_uuid">
-			<div class="flex justify-center space-x-6 pt-4">
+			<div class="flex justify-center space-x-6 py-4">
 				<UButton @click="openUpdateOJNModal" icon="i-heroicons-cloud-arrow-up">Upload OJN</UButton>
 				<UButton @click="selectOJNList" icon="i-heroicons-cloud-arrow-up" color="green">
 					<span v-if="channels?.length! > 0">Update/Create OJN List</span>
