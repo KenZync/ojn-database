@@ -92,6 +92,7 @@ useHead({
 
 const client = useSupabaseClient<Database>()
 const user = useSupabaseUser()
+console.log(user.value)
 const { data: servers } = await client.from('ojn_servers').select().order('id', { ascending: true })
 
 const loading = ref(false)
@@ -121,7 +122,10 @@ const fileOJNList = ref<File>()
 
 const signInWithDiscord = async () => {
 	const { error } = await client.auth.signInWithOAuth({
-		provider: 'discord'
+		provider: 'discord',
+		options: {
+			redirectTo: 'https://ojn-database.kenzync.dev/'
+		}
 	})
 	if (error) console.log(error)
 }
