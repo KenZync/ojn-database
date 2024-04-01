@@ -7,7 +7,7 @@
 	</div>
 	<UTabs
 		class="pt-4"
-		v-if="channels?.length! > 0"
+		v-if="!loading && channels?.length! > 0"
 		:items="channelTabs"
 		v-model="selectedChannel"
 		@change="onChannelChange"
