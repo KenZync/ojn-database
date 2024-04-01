@@ -1,8 +1,10 @@
 <template>
-	<!-- <ULink to="/">
-		<UButton icon="i-heroicons-arrow-left" variant="link" color="white">Back</UButton>
-	</ULink> -->
-	<div class="flex justify-center text-3xl">{{ server?.server_name }}</div>
+	<div class="flex justify-center text-3xl space-x-0 md:space-x-4 space-y-4 md:space-y-0 flex-col md:flex-row">
+		<div class="text-center">{{ server?.server_name }}</div>
+		<UButton :loading="loading" @click="download" icon="i-heroicons-arrow-down-tray" v-if="ojnlist"
+			>Download <span class="font-bold">ALL</span> Charts</UButton
+		>
+	</div>
 	<UTabs
 		class="pt-4"
 		v-if="!loading && channels?.length! > 0"
@@ -12,8 +14,8 @@
 	/>
 	<ClientOnly>
 		<div v-if="user?.id === server?.owner_uuid">
-			<div class="flex justify-center space-x-6 py-4">
-				<UButton @click="openUpdateOJNModal" icon="i-heroicons-cloud-arrow-up">Upload OJN</UButton>
+			<div class="flex flex-col md:flex-row justify-center space-x-0 md:space-x-6 space-y-4 md:space-y-0 py-4">
+				<UButton @click="openUpdateOJNModal" icon="i-heroicons-cloud-arrow-up">Upload OJN/OJM</UButton>
 				<UButton @click="selectOJNList" icon="i-heroicons-cloud-arrow-up" color="green">
 					<span v-if="channels?.length! > 0">Update/Create OJN List</span>
 					<span v-else>Create OJN List</span>
@@ -37,7 +39,7 @@
 			autofocus
 			class="grow"
 		/>
-		<div class="flex items-center space-x-4 justify-center pt-4 md:pt-0">
+		<div class="flex items-center space-x-2 justify-center pt-4 md:pt-0">
 			<UBadge color="green">{{ ojnlist?.count || 0 }} Charts</UBadge>
 			<UBadge>Updated: {{ new Date(channels![selectedChannel].updated_at).toLocaleString() }}</UBadge>
 		</div>
@@ -144,7 +146,7 @@
 			<template #header>
 				<div class="flex items-center justify-between">
 					<h3 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">
-						Upload OJN - {{ server?.server_name }}
+						Upload OJN/OJM - {{ server?.server_name }}
 					</h3>
 					<UButton
 						color="gray"
@@ -166,12 +168,19 @@
 							<span v-else>
 								<div>Drag & Drop</div>
 								<span>
-									.ojn files here or
+									.ojn, .ojm files here or
 									<span class="font-bold italic">click</span>
 								</span>
 							</span>
 
-							<input class="hidden" type="file" id="file-input" @change="onInputOJNChange" multiple accept=".ojn" />
+							<input
+								class="hidden"
+								type="file"
+								id="file-input"
+								@change="onInputOJNChange"
+								multiple
+								accept=".ojn,.ojm"
+							/>
 						</label>
 					</div>
 				</DropZone>
@@ -714,6 +723,24 @@ const renameChannel = async () => {
 	} catch (e: any) {
 		toast.add({ title: e, icon: 'i-heroicons-x-circle-solid', color: 'red' })
 	}
+	loading.value = false
+}
+
+const download = async () => {
+	loading.value = true
+	let body = {
+		name: server?.server_name
+	}
+	const response = await $fetch(`/api/download/${server?.folder_id}`, {
+		method: 'POST',
+		body: body
+	})
+
+	navigateTo(response.download_url, {
+		open: {
+			target: '_blank'
+		}
+	})
 	loading.value = false
 }
 </script>
