@@ -1,6 +1,7 @@
 import { boxClient } from '~/server/utils/boxSDK'
 import { serverSupabaseClient } from '#supabase/server'
 import type { Database } from '~/types/supabase'
+import { getTimestampInSeconds } from '~/utils/time'
 
 export default defineEventHandler(async (event) => {
 	const body: any = await readMultipartFormData(event)
@@ -12,7 +13,10 @@ export default defineEventHandler(async (event) => {
 	let ojn_list_name = body[3].filename
 	const clientBox = boxClient()
 
-	const create_channel = await clientBox.folders.create(server_folder_id, channel_name)
+	const create_channel = await clientBox.folders.create(
+		server_folder_id,
+		`${channel_name} - ${getTimestampInSeconds()}`
+	)
 	const create_ojn_list = await clientBox.files.uploadFile(create_channel.id, ojn_list_name, ojn_list)
 	await clientSupabase.from('ojn_channels').insert({
 		server_id: server_id,

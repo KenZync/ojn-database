@@ -1,6 +1,7 @@
 import { boxClient } from '~/server/utils/boxSDK'
 import { serverSupabaseClient } from '#supabase/server'
 import type { Database } from '~/types/supabase'
+import { getTimestampInSeconds } from '~/utils/time'
 
 export default defineEventHandler(async (event) => {
 	const clientBox = boxClient()
@@ -16,7 +17,7 @@ export default defineEventHandler(async (event) => {
 		await clientSupabase.from('ojn_servers').update({ server_name: body.name }).eq('id', body.id)
 	}
 
-	await clientBox.folders.update(body.folder_id, { name: `${body.name} - ${body.folder_id}` })
+	await clientBox.folders.update(body.folder_id, { name: `${body.name} - ${getTimestampInSeconds()}` })
 
 	return { status: true }
 })

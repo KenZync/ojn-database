@@ -92,9 +92,10 @@ export const parseFiles = async function (items: any, drop: boolean): Promise<Fi
 	// console.log(files)
 
 	for (let file of files) {
-		if (file.name.match(/\.ojn$/i) == null) {
+		if (!file.name.match(/\.ojn$|\.ojm$/i)) {
 			throw 'INVALID FORMAT'
 		} else {
+			// Code block for handling valid format (not provided in the snippet)
 		}
 	}
 
