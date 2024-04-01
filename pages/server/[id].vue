@@ -21,40 +21,14 @@
 				<UButton v-if="channels?.length! > 1" @click="openDeleteModal" color="red" icon="i-heroicons-trash"
 					>Remove Channel</UButton
 				>
-				<UButton icon="i-heroicons-tag" color="yellow" @click="openRenameModal">Rename</UButton>
-				<!-- <UButton color="red" icon="i-heroicons-trash">Remove Server</UButton> -->
-
-				<!-- <UButton @click="openAddChannelModal" color="green">Add Channel</UButton> -->
-				<!-- <UButton color="yellow">Rename Server</UButton>
-				<UButton color="yellow">Rename Channel</UButton>
-				<UButton color="red">Remove Channel</UButton>
-				<UButton color="red">Remove Server</UButton> -->
+				<UButton icon="i-heroicons-tag" color="yellow" @click="openRenameModal">Rename</UButton>>
 			</div>
 		</div>
 	</ClientOnly>
 	<form ref="formOJNList">
 		<input type="file" @change="onInputChange" hidden ref="fileOJNListInput" />
 	</form>
-	<!-- <div class="flex flex-col" v-if="channels?.length! > 1">
-		<span> Channel: {{ channels![selectedChannel].channel_name }}</span>
-		<span v-if="ojnlist"> Song Count: {{ ojnlist.count }}</span>
-
-		<span>
-			List updated at:
-			{{ new Date(channels![selectedChannel].updated_at).toLocaleString() }}</span
-		>
-	</div> -->
-
-	<!-- <div class="px-3 py-3.5 border-b border-gray-200 dark:border-gray-700">
-		<UInput
-			v-model="search"
-			icon="i-heroicons-magnifying-glass"
-			placeholder="Search Name, Artist, Note Charter, Level, BPM"
-			size="xl"
-			autofocus
-		/>
-	</div> -->
-	<div class="flex justify-between flex-col md:flex-row space-x-4">
+	<div class="flex justify-between flex-col md:flex-row space-x-0 md:space-x-4">
 		<UInput
 			v-model="search"
 			icon="i-heroicons-magnifying-glass"
