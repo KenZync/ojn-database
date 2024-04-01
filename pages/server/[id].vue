@@ -693,15 +693,15 @@ const deleteChannel = async () => {
 			icon: 'i-heroicons-check-circle-solid',
 			color: 'green'
 		})
+		deleteModal.value = false
+		router.push({ query: { channel: 0 } })
+		selectedChannel.value = 0
+		refreshChannel()
+		refreshOJNList()
 	} else {
 		alert('NOT CORRECT')
 	}
 	loading.value = false
-	deleteModal.value = false
-	router.push({ query: { channel: 0 } })
-	selectedChannel.value = 0
-	refreshChannel()
-	refreshOJNList()
 }
 
 const onTabRenameChange = (index: number) => {
