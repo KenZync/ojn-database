@@ -579,7 +579,7 @@ const updateOJN = async () => {
 	now.value = 0
 	loading.value = true
 
-	const limit = pLimit(20)
+	const limit = pLimit(10)
 
 	const asyncOperation = (ojn: File) => {
 		return new Promise<void>(async (resolve) => {
