@@ -683,6 +683,7 @@ const deleteChannel = async () => {
 		alert('NOT CORRECT')
 	}
 	loading.value = false
+	deleteModal.value = false
 	router.push({ query: { channel: 0 } })
 	selectedChannel.value = 0
 	ojnlist.value = undefined
