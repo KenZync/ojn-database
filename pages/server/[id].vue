@@ -21,7 +21,7 @@
 				<UButton v-if="channels?.length! > 1" @click="openDeleteModal" color="red" icon="i-heroicons-trash"
 					>Remove Channel</UButton
 				>
-				<UButton icon="i-heroicons-tag" color="yellow" @click="openRenameModal">Rename</UButton>>
+				<UButton icon="i-heroicons-tag" color="yellow" @click="openRenameModal">Rename</UButton>
 			</div>
 		</div>
 	</ClientOnly>
