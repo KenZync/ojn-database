@@ -22,6 +22,7 @@
 				<UButton v-if="channels?.length! > 1" @click="openDeleteModal" color="red" icon="i-heroicons-trash"
 					>Remove Channel</UButton
 				>
+				<UButton icon="i-heroicons-tag" color="yellow" @click="openRenameModal">Rename</UButton>
 				<!-- <UButton color="red" icon="i-heroicons-trash">Remove Server</UButton> -->
 
 				<!-- <UButton @click="openAddChannelModal" color="green">Add Channel</UButton> -->
@@ -47,7 +48,7 @@
 	<UTable
 		class="pt-4"
 		:rows="ojnlist?.ojnlists"
-		:columns="columns"
+		:columns="ojnColumns"
 		:loading-state="{ icon: 'i-heroicons-arrow-path-20-solid', label: 'Loading...' }"
 		:loading="pendingList"
 		:ui="{ td: { base: '', color: 'text-black dark:text-gray-200' } }"
@@ -72,7 +73,14 @@
 						/>
 					</div>
 				</template>
-				<UTabs :items="items" v-model="selectedTab">
+				<UTabs :items="updateTabs" v-model="selectedTab">
+					<template #default="{ item, selected }">
+						<div class="flex items-center gap-2 relative truncate">
+							<UIcon :name="item.icon" class="w-4 h-4 flex-shrink-0" />
+							<span>{{ item.label }}</span>
+							<span v-if="selected" class="absolute -right-4 w-2 h-2 rounded-full bg-primary-500 dark:bg-primary-400" />
+						</div>
+					</template>
 					<template #item="{ item }">
 						<div v-if="item.key === 'update'">
 							<span v-if="channels?.length! < 0">Channel : {{ channels![selectedChannel].channel_name }}</span>
@@ -97,7 +105,7 @@
 					<UTable
 						class="max-h-96"
 						:rows="updatingOJNList?.ojnlists"
-						:columns="columns"
+						:columns="ojnColumns"
 						:loading-state="{ icon: 'i-heroicons-arrow-path-20-solid', label: 'Loading...' }"
 						:loading="pendingList"
 						:ui="{ td: { base: '', color: 'text-black dark:text-gray-200' } }"
@@ -213,7 +221,7 @@
 							variant="ghost"
 							icon="i-heroicons-x-mark-20-solid"
 							class="-my-1"
-							@click="closeOJNListModal"
+							@click="closeDeleteModal"
 						/>
 					</div>
 				</template>
@@ -235,6 +243,47 @@
 					<UButton :loading="loading" size="xl" icon="i-heroicons-trash" block color="red" type="submit">
 						<span v-if="loading">Deleting</span>
 						<span v-else>Delete Channel</span>
+					</UButton>
+				</template>
+			</UCard>
+		</UForm>
+	</UModal>
+
+	<UModal v-model="renameModal" :prevent-close="loading">
+		<UForm :schema="schema" :state="state" @submit="renameChannel">
+			<UCard>
+				<template #header>
+					<div class="flex items-center justify-between">
+						<h3 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">
+							Rename Server / Channel - {{ channels![selectedChannel].channel_name }}
+						</h3>
+						<UButton
+							color="gray"
+							variant="ghost"
+							icon="i-heroicons-x-mark-20-solid"
+							class="-my-1"
+							@click="closeRenameModal"
+						/>
+					</div>
+				</template>
+				<UTabs :items="renameTabs" class="w-full" v-model="selectedTab" @change="onTabRenameChange">
+					<template #default="{ item, index, selected }">
+						<div class="flex items-center gap-2 relative truncate">
+							<UIcon :name="item.icon" class="w-4 h-4 flex-shrink-0" />
+							<span>{{ item.label }}</span>
+							<span v-if="selected" class="absolute -right-4 w-2 h-2 rounded-full bg-primary-500 dark:bg-primary-400" />
+						</div>
+					</template>
+				</UTabs>
+				<div>
+					<UFormGroup :label="`${renameTabs[selectedTab].label} Name`" name="channel" required>
+						<UInput class="mt-1" size="md" color="gray" variant="outline" v-model="state.channel" />
+					</UFormGroup>
+				</div>
+				<template #footer>
+					<UButton :loading="loading" size="xl" icon="i-heroicons-tag-solid" block color="yellow" type="submit">
+						<span v-if="loading">Renaming</span>
+						<span v-else>Rename <span v-if="selectedTab === 0">Channel</span> <span v-else>Server</span></span>
 					</UButton>
 				</template>
 			</UCard>
@@ -273,18 +322,17 @@ const uploadOJNModal = ref(false)
 const fileOJNInput = ref<File[]>()
 
 const deleteModal = ref(false)
+const renameModal = ref(false)
 
 const state = reactive({
 	channel: ''
 })
 
 const now = ref(0)
-
 const toast = useToast()
-
 const selectedTab = ref(0)
 
-const columns = [
+const ojnColumns = [
 	{
 		key: 'song_id',
 		label: 'ID',
@@ -329,7 +377,7 @@ const { data: channels, refresh: refreshChannel } = await useAsyncData('ojn_chan
 	return data
 })
 
-const items = [
+const updateTabs = [
 	{
 		key: 'update',
 		label: 'Update',
@@ -337,11 +385,28 @@ const items = [
 		disabled: channels?.value!.length === 0
 	},
 	{
-		key: 'Create',
+		key: 'create',
 		label: 'Create',
 		icon: 'i-heroicons-document-plus-solid'
 	}
 ]
+
+const renameTabs = computed(() => {
+	return [
+		{
+			key: 'channel',
+			label: 'Channel',
+			icon: 'i-heroicons-at-symbol',
+			disabled: loading.value
+		},
+		{
+			key: 'server',
+			label: 'Server',
+			icon: 'i-heroicons-server-solid',
+			disabled: loading.value
+		}
+	]
+})
 
 useHead({
 	title: `${server?.server_name} - OJN Database`,
@@ -379,6 +444,7 @@ const {
 	server: false,
 	watch: [ojnlistID]
 })
+
 watch(list, (newList) => {
 	ojnlist.value = convert(newList)
 })
@@ -564,6 +630,24 @@ const openDeleteModal = () => {
 	state.channel = ''
 }
 
+const closeDeleteModal = () => {
+	if (!loading.value) {
+		deleteModal.value = false
+	}
+}
+
+const openRenameModal = () => {
+	selectedTab.value = 0
+	renameModal.value = true
+	state.channel = channels.value![selectedChannel.value].channel_name
+}
+
+const closeRenameModal = () => {
+	if (!loading.value) {
+		renameModal.value = false
+	}
+}
+
 const deleteChannel = async () => {
 	if (state.channel === `${server?.server_name}/${channels.value![selectedChannel.value].channel_name}`) {
 		loading.value = true
@@ -589,5 +673,41 @@ const deleteChannel = async () => {
 	ojnlist.value = undefined
 	refreshChannel()
 	refreshOJNList()
+}
+
+const onTabRenameChange = (index: number) => {
+	if (renameTabs.value[index].key === 'channel') {
+		state.channel = channels.value![selectedChannel.value].channel_name
+	} else {
+		state.channel = server?.server_name!
+	}
+}
+
+const renameChannel = async () => {
+	loading.value = true
+	let tab = renameTabs.value[selectedTab.value]
+	let body: RenameBodyRequest = {
+		type: tab.key,
+		id: tab.key === 'channel' ? channels.value![selectedChannel.value].id! : server?.id!,
+		name: state.channel,
+		folder_id: tab.key === 'channel' ? channels.value![selectedChannel.value].folder_id! : server?.folder_id!
+	}
+
+	try {
+		await $fetch<CreateResponse>('/api/rename', {
+			method: 'POST',
+			body: body
+		})
+		renameModal.value = false
+		toast.add({
+			title: `${tab.label} renamed`,
+			icon: 'i-heroicons-check-circle-solid',
+			color: 'green'
+		})
+		await refreshChannel()
+	} catch (e: any) {
+		toast.add({ title: e, icon: 'i-heroicons-x-circle-solid', color: 'red' })
+	}
+	loading.value = false
 }
 </script>

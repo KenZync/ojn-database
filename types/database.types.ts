@@ -8,4 +8,11 @@ declare global {
 		channel_folder_id: string
 		ojn_list_file_id: string
 	}
+
+	interface RenameBodyRequest {
+		type: string
+		id: number
+		name: string
+		folder_id: string
+	}
 }

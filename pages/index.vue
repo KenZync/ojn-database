@@ -179,7 +179,7 @@ const onSubmit = async () => {
 			alert(createError)
 		}
 		if (server) {
-			const create = await createFolder(state.server, state.channel, fileOJNList.value!)
+			const create = await createFolder(state.server, state.channel, fileOJNList.value!, String(server.id!))
 			await client.from('ojn_servers').update({ folder_id: create.server_folder_id }).eq('id', server.id)
 			await client.from('ojn_channels').insert({
 				server_id: server.id,
@@ -196,11 +196,13 @@ const onSubmit = async () => {
 	}
 }
 
-const createFolder = async (server_name: string, channel_name: string, file: File) => {
+const createFolder = async (server_name: string, channel_name: string, file: File, server_id: string) => {
 	const formData = new FormData()
 	formData.append('server_name', server_name)
 	formData.append('channel_name', channel_name)
 	formData.append('file', file)
+	formData.append('server_id', String(server_id))
+
 	return await $fetch<CreateResponse>('/api/create', {
 		method: 'POST',
 		body: formData
