@@ -61,7 +61,6 @@
 	</UTable>
 
 	<UModal v-model="updateOJNListModal" :prevent-close="loading">
-		{{ `${Math.floor(Date.now() / 1000)}` }}
 		<UForm :schema="schema" :state="state" @submit="createChannel">
 			<UCard>
 				<template #header>
