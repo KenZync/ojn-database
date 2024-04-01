@@ -28,7 +28,7 @@
 				</div>
 
 				<template #fallback>
-					<UButton loading />
+					<UButton loading variant="ghost" color="white" />
 				</template>
 			</ClientOnly>
 		</UContainer>
