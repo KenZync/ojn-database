@@ -651,7 +651,9 @@ const onChannelChange = (index: number) => {
 
 const openOJNViewer = (e: OJNHeader) => {
 	navigateTo(`https://ojn.kenzync.dev/?id=${e.song_id}&server=ojn&folder=${server?.folder_id}`, {
-		external: true
+		open: {
+			target: '_blank'
+		}
 	})
 }
 
@@ -774,7 +776,11 @@ const downloadChart = async (header: OJNHeader) => {
 		})
 
 		if (response.download_url) {
-			navigateTo(response.download_url, { external: true })
+			navigateTo(response.download_url, {
+				open: {
+					target: '_blank'
+				}
+			})
 		}
 	} catch (e) {
 		toast.add({
