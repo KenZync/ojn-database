@@ -306,6 +306,10 @@
 import type { Database } from '~/types/supabase'
 import pLimit from 'p-limit'
 import * as yup from 'yup'
+import { FetchError } from 'ofetch'
+
+const boxAPI = 'https://api.box.com/2.0'
+const boxUploadAPI = 'https://upload.box.com/api/2.0'
 
 const client = useSupabaseClient<Database>()
 const user = useSupabaseUser()
@@ -575,27 +579,95 @@ const updateOJNList = async () => {
 	toast.add({ title: 'OJN List Updated!', icon: 'i-heroicons-check-circle-solid', color: 'green' })
 }
 
+function splitFile(file: File, partSize: number) {
+	const fileSize = file.size
+	const numParts = Math.ceil(fileSize / partSize)
+	const fileParts = []
+
+	let start = 0
+	let end = Math.min(partSize, fileSize)
+
+	for (let i = 0; i < numParts; i++) {
+		const partBlob = file.slice(start, end)
+		fileParts.push(partBlob)
+		start = end
+		end = Math.min(start + partSize, fileSize)
+	}
+
+	return fileParts
+}
+
 const updateOJN = async () => {
 	now.value = 0
 	loading.value = true
-
 	const limit = pLimit(10)
+	const response = await $fetch(`/api/token`)
 
 	const asyncOperation = (ojn: File) => {
 		return new Promise<void>(async (resolve) => {
 			const formData = new FormData()
+			let uploaded = false
+			let upload_error: FetchError
+			let file_id = ''
+			let upload_url = '/files/content'
+			let checked = false
+
+			let bodyCheck = JSON.stringify({
+				name: ojn.name,
+				parent: {
+					id: server?.folder_id
+				}
+			})
+			formData.append('attributes', bodyCheck)
 			formData.append('file', ojn)
+
 			try {
-				await $fetch(`/api/ojn/${server?.folder_id}`, {
-					method: 'POST',
-					body: formData,
-					retry: 10
+				await $fetch(`${boxAPI}${upload_url}`, {
+					method: 'OPTIONS',
+					headers: {
+						authorization: `Bearer ${response.access_token}`
+					},
+					body: bodyCheck,
+					retry: 3,
+					retryStatusCodes: [408, 425, 429, 500, 502, 503, 504],
+					retryDelay: 500
 				})
-				now.value++
-				resolve()
-			} catch (e) {
+				checked = true
+			} catch (err) {
+				const error = err as FetchError
+				if (error.statusCode === 409) {
+					checked = true
+					uploaded = true
+					file_id = error.data.context_info.conflicts.id
+				}
+			}
+
+			if (uploaded) {
+				upload_url = `/files/${file_id}/content`
+			}
+
+			if (checked) {
+				try {
+					await $fetch(`${boxUploadAPI}${upload_url}`, {
+						method: 'POST',
+						headers: {
+							authorization: `Bearer ${response.access_token}`
+						},
+						body: formData,
+						retry: 3,
+						retryDelay: 1000
+					})
+					now.value++
+					resolve()
+					uploaded = true
+				} catch (err) {
+					upload_error = err as FetchError
+				}
+			}
+
+			if (!uploaded) {
 				toast.add({
-					title: `Uploading ${ojn.name} failed. ${e}`,
+					title: `Uploading ${ojn.name} failed.`,
 					icon: 'i-heroicons-x-circle-16-solid',
 					color: 'red',
 					timeout: 0
