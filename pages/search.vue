@@ -190,7 +190,7 @@ const searchOJN = async (q: string, reset: boolean) => {
 			const keyConverted = calculateKey(key)
 			if (value.length && key.length > 1) {
 				if (filterPart[keyConverted] === undefined) {
-					filterPart[keyConverted] = { gt: parseFloat(value) }
+					filterPart[keyConverted] = { lt: parseFloat(value) }
 				} else {
 					filterPart[keyConverted] = {
 						...(filterPart[keyConverted] as { gt: number }),
