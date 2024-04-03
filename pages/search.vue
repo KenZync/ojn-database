@@ -13,6 +13,7 @@
 				:autoclear="false"
 				:close-button="{ icon: 'i-heroicons-x-mark-20-solid', color: 'gray', variant: 'link', padded: false }"
 				:ui="{ wrapper: ' divide-y-0' }"
+				:debounce="500"
 			>
 				<template #empty-state>
 					<div></div>
@@ -150,20 +151,70 @@ const searchOJN = async (q: string, reset: boolean) => {
 	if (reset) {
 		page.value = 1
 	}
+	const parts = q.split(' ')
+	const filterPart: Filter = {}
+	interface Filter {
+		[key: string]: number | { gt?: number; lt?: number } | string
+	}
+	let justQ = null
+
+	parts.forEach((part) => {
+		if (part.includes('=')) {
+			const [key, value] = part.split('=')
+			const keyConverted = calculateKey(key)
+			if (value.length) {
+				let theValue = parseFloat(value)
+				if (isNaN(theValue)) {
+					filterPart[keyConverted] = value
+				} else {
+					filterPart[keyConverted] = { gt: theValue, lt: theValue }
+				}
+			}
+		} else if (part.includes('>')) {
+			const [key, value] = part.split('>')
+			const keyConverted = calculateKey(key)
+			if (value.length) {
+				if (filterPart[keyConverted] === undefined) {
+					filterPart[keyConverted] = { gt: parseFloat(value) }
+				} else {
+					filterPart[keyConverted] = {
+						...(filterPart[keyConverted] as { lt: number }),
+						gt: parseFloat(value)
+					}
+				}
+			}
+		} else if (part.includes('<')) {
+			const [key, value] = part.split('<')
+			const keyConverted = calculateKey(key)
+			if (value.length) {
+				if (filterPart[keyConverted] === undefined) {
+					filterPart[keyConverted] = { gt: parseFloat(value) }
+				} else {
+					filterPart[keyConverted] = {
+						...(filterPart[keyConverted] as { gt: number }),
+						lt: parseFloat(value)
+					}
+				}
+			}
+		} else {
+			justQ = part
+		}
+	})
+
 	try {
 		const rawResult = await $fetch<Search>(`${boxAPI}/search`, {
 			headers: {
 				authorization: `Bearer ${data.value?.access_token}`
 			},
 			query: {
-				query: q,
+				...(justQ ? { query: justQ } : {}),
 				ancestor_folder_ids: process.env.NUXT_BOX_PRIVATE_FOLDER_ID,
 				mdfilters: [
 					[
 						{
 							scope: 'enterprise',
 							templateKey: 'ojn',
-							filters: {}
+							filters: filterPart
 						}
 					]
 				],
@@ -179,9 +230,9 @@ const searchOJN = async (q: string, reset: boolean) => {
 		toast.add({
 			title: `${error}`,
 			icon: 'i-heroicons-x-circle-16-solid',
-			color: 'red',
-			timeout: 0
+			color: 'red'
 		})
+		result.value = []
 	}
 	searching.value = false
 }
