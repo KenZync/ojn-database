@@ -135,13 +135,14 @@ const limit = 30
 const searching = ref(false)
 
 const query = ref('')
+const token = ref('')
 
-const { data } = useFetch(`/api/token`, {
-	retry: 3,
-	retryStatusCodes: [400]
-})
-
-onMounted(() => {
+onMounted(async () => {
+	const response = await $fetch(`/api/token`, {
+		retry: 3,
+		retryStatusCodes: [400]
+	})
+	token.value = response.access_token
 	searchOJN('', true)
 })
 
@@ -163,7 +164,7 @@ const searchOJN = async (q: string, reset: boolean) => {
 		if (part.includes('=')) {
 			const [key, value] = part.split('=')
 			const keyConverted = calculateKey(key)
-			if (value.length) {
+			if (value.length && key.length > 1) {
 				let theValue = parseFloat(value)
 				if (isNaN(theValue)) {
 					filterPart[keyConverted] = value
@@ -174,7 +175,7 @@ const searchOJN = async (q: string, reset: boolean) => {
 		} else if (part.includes('>')) {
 			const [key, value] = part.split('>')
 			const keyConverted = calculateKey(key)
-			if (value.length) {
+			if (value.length && key.length > 1) {
 				if (filterPart[keyConverted] === undefined) {
 					filterPart[keyConverted] = { gt: parseFloat(value) }
 				} else {
@@ -187,7 +188,7 @@ const searchOJN = async (q: string, reset: boolean) => {
 		} else if (part.includes('<')) {
 			const [key, value] = part.split('<')
 			const keyConverted = calculateKey(key)
-			if (value.length) {
+			if (value.length && key.length > 1) {
 				if (filterPart[keyConverted] === undefined) {
 					filterPart[keyConverted] = { gt: parseFloat(value) }
 				} else {
@@ -205,7 +206,7 @@ const searchOJN = async (q: string, reset: boolean) => {
 	try {
 		const rawResult = await $fetch<Search>(`${boxAPI}/search`, {
 			headers: {
-				authorization: `Bearer ${data.value?.access_token}`
+				authorization: `Bearer ${token.value}`
 			},
 			query: {
 				...(justQ ? { query: justQ } : {}),
@@ -228,11 +229,13 @@ const searchOJN = async (q: string, reset: boolean) => {
 		allCount.value = rawResult.total_count
 	} catch (err) {
 		const error = err as FetchError
-		toast.add({
-			title: `${error}`,
-			icon: 'i-heroicons-x-circle-16-solid',
-			color: 'red'
-		})
+		if (error.statusCode === 401) {
+			toast.add({
+				title: `Please Login`,
+				icon: 'i-heroicons-x-circle-16-solid',
+				color: 'red'
+			})
+		}
 		result.value = []
 	}
 	searching.value = false

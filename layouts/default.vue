@@ -49,30 +49,21 @@ import type { Database } from '~/types/supabase'
 const user = useSupabaseUser()
 const client = useSupabaseClient<Database>()
 
-const links = [
-	// {
-	// 	label: 'Servers',
-	// 	avatar: {
-	// 		src: 'https://avatars.githubusercontent.com/u/739984?v=4'
-	// 	},
-	// 	badge: 100
-	// },
+let links = [
 	{
 		label: 'Servers',
 		icon: 'i-heroicons-server-stack',
 		to: '/'
-	},
-	{
+	}
+]
+
+if (user.value) {
+	links.push({
 		label: 'Search',
 		icon: 'i-heroicons-magnifying-glass',
 		to: `/search`
-	}
-	// {
-	// 	label: 'Command Palette',
-	// 	icon: 'i-heroicons-command-line',
-	// 	to: '/components/command-palette'
-	// }
-]
+	})
+}
 
 const signInWithDiscord = async () => {
 	if (process.env.NODE_ENV === 'development') {
