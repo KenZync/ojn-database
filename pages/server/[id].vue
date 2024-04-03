@@ -30,7 +30,7 @@
 	<form ref="formOJNList">
 		<input type="file" @change="onInputChange" hidden ref="fileOJNListInput" />
 	</form>
-	<div class="flex justify-between flex-col md:flex-row space-x-0 md:space-x-4">
+	<div class="flex justify-between flex-col md:flex-row space-x-0 md:space-x-4 pt-4">
 		<UInput
 			v-model="search"
 			icon="i-heroicons-magnifying-glass"
@@ -196,7 +196,7 @@
 						{{ ojn.name }}
 					</div>
 				</div>
-				<div class="pt-4">Song Count : {{ fileOJNInput?.length }}</div>
+				<div class="pt-4">File Count : {{ fileOJNInput?.length }}</div>
 				<div class="pt-4 flex items-center justify-center">
 					<UIcon class="text-2xl text-yellow-400 pl-8" name="i-heroicons-exclamation-triangle-solid" />
 					<p>You are uploading .OJN files for all channels.</p>
@@ -354,7 +354,7 @@ const ojnColumns = [
 	},
 	{
 		key: 'title',
-		label: 'Name',
+		label: 'Title',
 		sortable: true
 	},
 	{
@@ -482,7 +482,7 @@ const {
 })
 
 watch(list, (newList) => {
-	ojnlist.value = convert(newList)
+	ojnlist.value = convert(newList, false)
 })
 
 const selectOJNList = () => {
@@ -504,7 +504,7 @@ const onInputChange = async (e: any) => {
 
 	try {
 		let arrayBuffer: ArrayBuffer = await readFileAsArrayBuffer(list)
-		let converted = convert(arrayBuffer)
+		let converted = convert(arrayBuffer, false)
 		if (converted.count === converted.ojnlists.length && converted.count > 0) {
 			fileOJNList.value = list
 			updatingOJNList.value = converted
@@ -579,38 +579,24 @@ const updateOJNList = async () => {
 	toast.add({ title: 'OJN List Updated!', icon: 'i-heroicons-check-circle-solid', color: 'green' })
 }
 
-function splitFile(file: File, partSize: number) {
-	const fileSize = file.size
-	const numParts = Math.ceil(fileSize / partSize)
-	const fileParts = []
-
-	let start = 0
-	let end = Math.min(partSize, fileSize)
-
-	for (let i = 0; i < numParts; i++) {
-		const partBlob = file.slice(start, end)
-		fileParts.push(partBlob)
-		start = end
-		end = Math.min(start + partSize, fileSize)
-	}
-
-	return fileParts
-}
-
 const updateOJN = async () => {
 	now.value = 0
 	loading.value = true
 	const limit = pLimit(10)
-	const response = await $fetch(`/api/token`)
+	const response = await $fetch(`/api/token`, { retry: 10 })
 
 	const asyncOperation = (ojn: File) => {
 		return new Promise<void>(async (resolve) => {
 			const formData = new FormData()
 			let uploaded = false
-			let upload_error: FetchError
+			let upload_error: FetchError | null = null
 			let file_id = ''
 			let upload_url = '/files/content'
 			let checked = false
+			let put_file = false
+			let metadata_updated = false
+			let is_ojn = ojn.name.match(/\.ojn$/i) !== null
+			let upload_passed = false
 
 			let bodyCheck = JSON.stringify({
 				name: ojn.name,
@@ -618,6 +604,7 @@ const updateOJN = async () => {
 					id: server?.folder_id
 				}
 			})
+
 			formData.append('attributes', bodyCheck)
 			formData.append('file', ojn)
 
@@ -643,12 +630,13 @@ const updateOJN = async () => {
 			}
 
 			if (uploaded) {
+				put_file = true
 				upload_url = `/files/${file_id}/content`
 			}
 
 			if (checked) {
 				try {
-					await $fetch(`${boxUploadAPI}${upload_url}`, {
+					const uploadResponse: any = await $fetch(`${boxUploadAPI}${upload_url}`, {
 						method: 'POST',
 						headers: {
 							authorization: `Bearer ${response.access_token}`
@@ -657,17 +645,81 @@ const updateOJN = async () => {
 						retry: 3,
 						retryDelay: 1000
 					})
-					now.value++
-					resolve()
+					const [firstEntry] = uploadResponse.entries
+					file_id = firstEntry.id
+
 					uploaded = true
+					upload_passed = true
 				} catch (err) {
 					upload_error = err as FetchError
 				}
 			}
 
-			if (!uploaded) {
+			if (is_ojn) {
+				let arrayBuffer: ArrayBuffer = await readFileAsArrayBuffer(ojn)
+				let rawHeader = convert(arrayBuffer, true).ojnlists
+				let [header] = rawHeader
+				let bodyMetadata = {
+					id: header.song_id,
+					title: header.title,
+					artist: header.artist,
+					noter: header.noter,
+					genre: header.genre,
+					bpm: header.bpm,
+					level_ex: header.difficulty.easy.level,
+					level_nx: header.difficulty.normal.level,
+					level_hx: header.difficulty.hard.level,
+					note_ex: header.difficulty.easy.note_count,
+					note_nx: header.difficulty.normal.note_count,
+					note_hx: header.difficulty.hard.note_count,
+					time_ex: header.difficulty.easy.duration,
+					time_nx: header.difficulty.normal.duration,
+					time_hx: header.difficulty.hard.duration
+				}
+				if (!put_file) {
+					try {
+						await $fetch(`${boxAPI}/files/${file_id}/metadata/enterprise/ojn`, {
+							method: 'POST',
+							headers: {
+								authorization: `Bearer ${response.access_token}`
+							},
+							body: JSON.stringify(bodyMetadata)
+						})
+						metadata_updated = true
+					} catch (err) {
+						upload_error = err as FetchError
+					}
+				} else {
+					let output = []
+					let key: keyof typeof bodyMetadata
+
+					for (key in bodyMetadata) {
+						let path = '/' + key
+						let value = bodyMetadata[key]
+						output.push({ op: 'replace', path: path, value: value })
+					}
+					try {
+						await $fetch(`${boxAPI}/files/${file_id}/metadata/enterprise/ojn`, {
+							method: 'PUT',
+							headers: {
+								authorization: `Bearer ${response.access_token}`,
+								'Content-Type': 'application/json-patch+json'
+							},
+							body: JSON.stringify(output)
+						})
+						metadata_updated = true
+					} catch (err) {
+						upload_error = err as FetchError
+					}
+				}
+			}
+
+			if ((is_ojn && upload_passed && metadata_updated) || (upload_passed && !is_ojn)) {
+				now.value++
+				resolve()
+			} else {
 				toast.add({
-					title: `Uploading ${ojn.name} failed.`,
+					title: `Uploading ${ojn.name} failed. ${upload_error}`,
 					icon: 'i-heroicons-x-circle-16-solid',
 					color: 'red',
 					timeout: 0

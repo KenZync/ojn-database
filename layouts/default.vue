@@ -5,6 +5,13 @@
 				<NuxtLink to="/">OJN Database</NuxtLink>
 			</div>
 			<ClientOnly>
+				<div class="hidden md:block">
+					<UHorizontalNavigation :links="links">
+						<template #default="{ link }">
+							<span class="group-hover:text-primary relative">{{ link.label }}</span>
+						</template>
+					</UHorizontalNavigation>
+				</div>
 				<UPopover v-if="user" mode="click">
 					<div class="flex items-center h-full space-x-4">
 						<div>
@@ -21,9 +28,9 @@
 					</template>
 				</UPopover>
 				<div v-else>
-					<UButton @click="signInWithDiscord">
+					<UButton @click="signInWithDiscord" size="2xs">
 						<UIcon name="fa6-brands:discord" dynamic class="text-3xl" />
-						<span>Login with Discord</span>
+						<div>Login with Discord</div>
 					</UButton>
 				</div>
 
@@ -41,6 +48,31 @@ import type { Database } from '~/types/supabase'
 
 const user = useSupabaseUser()
 const client = useSupabaseClient<Database>()
+
+const links = [
+	// {
+	// 	label: 'Servers',
+	// 	avatar: {
+	// 		src: 'https://avatars.githubusercontent.com/u/739984?v=4'
+	// 	},
+	// 	badge: 100
+	// },
+	{
+		label: 'Servers',
+		icon: 'i-heroicons-server-stack',
+		to: '/'
+	},
+	{
+		label: 'Search',
+		icon: 'i-heroicons-magnifying-glass',
+		to: `/search`
+	}
+	// {
+	// 	label: 'Command Palette',
+	// 	icon: 'i-heroicons-command-line',
+	// 	to: '/components/command-palette'
+	// }
+]
 
 const signInWithDiscord = async () => {
 	if (process.env.NODE_ENV === 'development') {

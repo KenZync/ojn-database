@@ -147,7 +147,7 @@ const onInputChange = async (e: any) => {
 
 	try {
 		let arrayBuffer: ArrayBuffer = await readFileAsArrayBuffer(file)
-		let converted = convert(arrayBuffer)
+		let converted = convert(arrayBuffer, false)
 		if (converted.count === converted.ojnlists.length && converted.count > 0) {
 			state.count = converted.count
 			state.file = arrayBuffer

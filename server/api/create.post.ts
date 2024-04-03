@@ -11,13 +11,10 @@ export default defineEventHandler(async (event) => {
 
 	const clientBox = boxClient()
 
-	const create_server = await clientBox.folders.create(
-		process.env.NUXT_BOX_PRIVATE_FOLDER_ID || '',
-		`${server_name} - ${server_id}`
-	)
+	const create_server = await clientBox.folders.create(process.env.NUXT_BOX_PRIVATE_FOLDER_ID || '', `${server_name}`)
 	const create_channel = await clientBox.folders.create(
 		create_server.id,
-		`${channel_name} - ${getTimestampInSeconds()}`
+		`${channel_name} || ${getTimestampInSeconds()}`
 	)
 	const create_ojn_list = await clientBox.files.uploadFile(create_channel.id, ojn_list_name, ojn_list)
 

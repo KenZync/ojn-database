@@ -17,12 +17,17 @@ const genreMap = [
 	'Etc'
 ]
 
-export const convert = (ojnlist: ArrayBuffer) => {
+export const convert = (ojnlist: ArrayBuffer, single: Boolean) => {
 	let dataview = new DataView(ojnlist)
 	let cursor = 0
 	let ojnlists: OJNHeader[] = []
-	let count = dataview.getInt32(cursor, true)
-	cursor += 4
+	let count = 0
+	if (!single) {
+		count = dataview.getInt32(cursor, true)
+		cursor += 4
+	} else {
+		count = 1
+	}
 	for (let i = 1; i <= count; i++) {
 		let header: OJNHeader = {
 			song_id: 0,
@@ -171,7 +176,6 @@ export const convert = (ojnlist: ArrayBuffer) => {
 
 		header.cover_offset = dataview.getInt32(cursor, true)
 		cursor += 4
-
 		ojnlists.push(header)
 	}
 

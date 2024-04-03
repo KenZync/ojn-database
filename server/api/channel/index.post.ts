@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
 
 	const create_channel = await clientBox.folders.create(
 		server_folder_id,
-		`${channel_name} - ${getTimestampInSeconds()}`
+		`${channel_name} || ${getTimestampInSeconds()}`
 	)
 	const create_ojn_list = await clientBox.files.uploadFile(create_channel.id, ojn_list_name, ojn_list)
 	await clientSupabase.from('ojn_channels').insert({

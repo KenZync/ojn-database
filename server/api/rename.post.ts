@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
 		await clientSupabase.from('ojn_servers').update({ server_name: body.name }).eq('id', body.id)
 	}
 
-	await clientBox.folders.update(body.folder_id, { name: `${body.name} - ${getTimestampInSeconds()}` })
+	await clientBox.folders.update(body.folder_id, { name: `${body.name} || ${getTimestampInSeconds()}` })
 
 	return { status: true }
 })
