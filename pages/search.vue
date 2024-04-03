@@ -47,10 +47,24 @@
 				<UButton variant="ghost" icon="i-heroicons-arrow-down-tray" @click="downloadChart(row)" />
 			</template>
 		</UTable>
+
+		<div class="flex justify-center py-8">
+			<UPagination
+				:prev-button="{ icon: 'i-heroicons-arrow-small-left-20-solid', label: 'Prev', color: 'gray' }"
+				:next-button="{ icon: 'i-heroicons-arrow-small-right-20-solid', trailing: true, label: 'Next', color: 'gray' }"
+				v-model="page"
+				:total="allCount"
+				:page-count="limit"
+				show-last
+				show-first
+				:disabled="searching"
+			/>
+		</div>
 	</ClientOnly>
 </template>
 
 <script setup lang="ts">
+import { FetchError } from 'ofetch'
 const boxAPI = 'https://api.box.com/2.0'
 
 const ojnColumns = [
@@ -130,30 +144,40 @@ const searchOJN = async (q: string, reset: boolean) => {
 	if (reset) {
 		page.value = 1
 	}
-	const rawResult = await $fetch<Search>(`${boxAPI}/search`, {
-		headers: {
-			authorization: `Bearer ${data.value?.access_token}`
-		},
-		query: {
-			query: q,
-			ancestor_folder_ids: process.env.NUXT_BOX_PRIVATE_FOLDER_ID,
-			mdfilters: [
-				[
-					{
-						scope: 'enterprise',
-						templateKey: 'ojn',
-						filters: {}
-					}
-				]
-			],
-			fields:
-				'parent,metadata.enterprise.ojn.id,metadata.enterprise.ojn.title,metadata.enterprise.ojn.artist,metadata.enterprise.ojn.noter,metadata.enterprise.ojn.level_hx,metadata.enterprise.ojn.bpm',
-			offset: (page.value - 1) * limit
-		}
-	})
-	result.value = rawResult.entries
+	try {
+		const rawResult = await $fetch<Search>(`${boxAPI}/search`, {
+			headers: {
+				authorization: `Bearer ${data.value?.access_token}`
+			},
+			query: {
+				query: q,
+				ancestor_folder_ids: process.env.NUXT_BOX_PRIVATE_FOLDER_ID,
+				mdfilters: [
+					[
+						{
+							scope: 'enterprise',
+							templateKey: 'ojn',
+							filters: {}
+						}
+					]
+				],
+				fields:
+					'parent,metadata.enterprise.ojn.id,metadata.enterprise.ojn.title,metadata.enterprise.ojn.artist,metadata.enterprise.ojn.noter,metadata.enterprise.ojn.level_hx,metadata.enterprise.ojn.bpm',
+				offset: (page.value - 1) * limit
+			}
+		})
+		result.value = rawResult.entries
+		allCount.value = rawResult.total_count
+	} catch (err) {
+		const error = err as FetchError
+		toast.add({
+			title: `${error}`,
+			icon: 'i-heroicons-x-circle-16-solid',
+			color: 'red',
+			timeout: 0
+		})
+	}
 	searching.value = false
-	allCount.value = rawResult.total_count
 }
 
 watch(
