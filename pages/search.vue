@@ -14,6 +14,7 @@
 				:close-button="{ icon: 'i-heroicons-x-mark-20-solid', color: 'gray', variant: 'link', padded: false }"
 				:ui="{ wrapper: ' divide-y-0' }"
 				:debounce="500"
+				placeholder="Search... example: lv>100 nx<20 bpm=200"
 			>
 				<template #empty-state>
 					<div></div>
