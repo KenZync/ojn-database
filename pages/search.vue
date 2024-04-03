@@ -65,6 +65,12 @@
 
 <script setup lang="ts">
 import { FetchError } from 'ofetch'
+
+useHead({
+	title: `Search - OJN Database`,
+	meta: [{ name: 'description', content: `Search and download .ojn/.ojm files` }]
+})
+
 const boxAPI = 'https://api.box.com/2.0'
 
 const ojnColumns = [
