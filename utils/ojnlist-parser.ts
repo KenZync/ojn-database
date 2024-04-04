@@ -74,7 +74,9 @@ export const convert = (ojnlist: ArrayBuffer, single: Boolean) => {
 			noter: '',
 			ojm_file: '',
 			cover_size: 0,
-			cover_offset: 0
+			cover_offset: 0,
+			image: Buffer.from('', 'base64'),
+			bmp: Buffer.from('', 'base64')
 		}
 
 		header.song_id = dataview.getInt32(cursor, true)
@@ -176,6 +178,20 @@ export const convert = (ojnlist: ArrayBuffer, single: Boolean) => {
 
 		header.cover_offset = dataview.getInt32(cursor, true)
 		cursor += 4
+
+		const cover_offset_end = header.cover_offset + header.cover_size
+		const bmp_offset_end = cover_offset_end + header.bmp_size
+
+		if (single) {
+			const cover_base64 = Buffer.from(ojnlist.slice(header.cover_offset, cover_offset_end))
+			// const cover = 'data:image/png;base64,' + cover_base64
+			const bmp_base64 = Buffer.from(ojnlist.slice(cover_offset_end, bmp_offset_end))
+			// const bmp = 'data:image/png;base64,' + bmp_base64
+
+			header.image = cover_base64
+			header.bmp = bmp_base64
+		}
+
 		ojnlists.push(header)
 	}
 

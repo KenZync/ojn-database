@@ -14,14 +14,14 @@
 				:close-button="{ icon: 'i-heroicons-x-mark-20-solid', color: 'gray', variant: 'link', padded: false }"
 				:ui="{ wrapper: ' divide-y-0' }"
 				:debounce="500"
-				placeholder="Search... example: lv>100 nx<20 bpm=200"
+				placeholder="Search Database... example: lv>100 nx<20 bpm=200"
 			>
 				<template #empty-state>
 					<div></div>
 				</template>
 			</UCommandPalette>
 		</UCard>
-		<div class="flex justify-center pt-4">
+		<div class="flex justify-between pt-4">
 			<UPagination
 				:prev-button="{ icon: 'i-heroicons-arrow-small-left-20-solid', label: 'Prev', color: 'gray' }"
 				:next-button="{ icon: 'i-heroicons-arrow-small-right-20-solid', trailing: true, label: 'Next', color: 'gray' }"
@@ -32,6 +32,10 @@
 				show-first
 				:disabled="searching"
 			/>
+			<div class="flex items-center">
+				<p class="pr-4">Per page</p>
+				<USelect size="sm" v-model="limit" :options="['30', '50', '100', '200']" />
+			</div>
 		</div>
 
 		<UTable
@@ -42,6 +46,22 @@
 			:loading="searching"
 			:ui="{ td: { base: '', color: 'text-black dark:text-gray-200' } }"
 		>
+			<template #img-data="{ row }">
+				<UPopover mode="hover" :popper="{ placement: 'right' }">
+					<img
+						loading="lazy"
+						class="h-20 w-auto min-w-20"
+						alt=""
+						:src="getImage(row.metadata.enterprise.ojn.img, row.metadata.enterprise.ojn.bmp)"
+						@error="test"
+					/>
+					<template #panel>
+						<div class="p-4">
+							<img :src="imageList.get(row.metadata.enterprise.ojn.img)" />
+						</div>
+					</template>
+				</UPopover>
+			</template>
 			<template #view-data="{ row }">
 				<UButton variant="ghost" icon="i-heroicons-eye-solid" @click="openOJNViewer(row)" />
 			</template>
@@ -82,6 +102,10 @@ const ojnColumns = [
 		sortable: true
 	},
 	{
+		key: 'img',
+		label: 'IMG'
+	},
+	{
 		key: 'metadata.enterprise.ojn.title',
 		label: 'Title',
 		sortable: true
@@ -107,12 +131,12 @@ const ojnColumns = [
 		sortable: true
 	},
 	{
-		label: 'View',
-		key: 'view'
+		key: 'view',
+		label: 'View'
 	},
 	{
-		label: 'DL',
-		key: 'download'
+		key: 'download',
+		label: 'DL'
 	}
 ]
 
@@ -130,12 +154,13 @@ const toast = useToast()
 const result = ref()
 const page = ref(1)
 const allCount = ref(0)
-const limit = 30
+const limit = ref(30)
 
-const searching = ref(false)
+const searching = ref(true)
 
 const query = ref('')
 const token = ref('')
+const imageList = ref(new Map<string, string>())
 
 onMounted(async () => {
 	const response = await $fetch(`/api/token`, {
@@ -221,8 +246,9 @@ const searchOJN = async (q: string, reset: boolean) => {
 					]
 				],
 				fields:
-					'parent,metadata.enterprise.ojn.id,metadata.enterprise.ojn.title,metadata.enterprise.ojn.artist,metadata.enterprise.ojn.noter,metadata.enterprise.ojn.level_hx,metadata.enterprise.ojn.bpm',
-				offset: (page.value - 1) * limit
+					'parent,metadata.enterprise.ojn.id,metadata.enterprise.ojn.title,metadata.enterprise.ojn.artist,metadata.enterprise.ojn.noter,metadata.enterprise.ojn.level_hx,metadata.enterprise.ojn.bpm,metadata.enterprise.ojn.bmp,metadata.enterprise.ojn.img',
+				offset: (page.value - 1) * limit.value,
+				limit: limit.value
 			}
 		})
 		result.value = rawResult.entries
@@ -245,6 +271,13 @@ watch(
 	() => page.value,
 	() => {
 		searchOJN(query.value, false)
+	}
+)
+
+watch(
+	() => limit.value,
+	() => {
+		searchOJN(query.value, true)
 	}
 )
 
@@ -287,5 +320,46 @@ const downloadChart = async (header: Entry) => {
 			timeout: 0
 		})
 	}
+}
+
+const test = (e: Event) => {
+	// console.log(e)
+}
+
+const getImage = (img_id: string, bmp_id: string) => {
+	if (imageList.value.get(img_id)) return imageList.value.get(img_id)
+	let base64data = ''
+	try {
+		$fetch(`${boxAPI}/files/${img_id}/content`, {
+			headers: {
+				authorization: `Bearer ${token.value}`
+			}
+		}).then((response) => {
+			var reader = new FileReader()
+
+			reader.readAsDataURL(response as Blob)
+			reader.onloadend = function () {
+				base64data = reader.result as string
+				imageList.value.set(img_id, base64data as string)
+			}
+		})
+
+		if (base64data === 'data:image/png;base64,') {
+			$fetch(`${boxAPI}/files/${bmp_id}/content`, {
+				headers: {
+					authorization: `Bearer ${token.value}`
+				}
+			}).then((response) => {
+				var reader = new FileReader()
+
+				reader.readAsDataURL(response as Blob)
+				reader.onloadend = function () {
+					var base64data = reader.result
+					imageList.value.set(img_id, base64data as string)
+				}
+			})
+		}
+	} catch (err) {}
+	return imageList.value.get(img_id)
 }
 </script>

@@ -1,7 +1,7 @@
 <template>
 	<div class="sticky top-0 z-20 border-b border-gray-700 backdrop-blur-md h-16">
 		<UContainer class="flex items-center h-full justify-between">
-			<div class="text-xl">
+			<div class="text-xl font-bold">
 				<NuxtLink to="/">OJN Database</NuxtLink>
 			</div>
 			<ClientOnly>

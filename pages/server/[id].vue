@@ -2,7 +2,7 @@
 	<div class="flex justify-center text-3xl space-x-0 md:space-x-4 space-y-4 md:space-y-0 flex-col md:flex-row">
 		<div class="text-center">{{ server?.server_name }}</div>
 		<UButton :loading="loading" @click="downloadAll" icon="i-heroicons-arrow-down-tray" v-if="server"
-			>Download <span class="font-bold">ALL</span> Charts</UButton
+			>Download <span class="font-bold">Everything</span></UButton
 		>
 	</div>
 	<UTabs
@@ -193,7 +193,8 @@
 			<div v-else>
 				<div class="max-h-72 overflow-auto">
 					<div v-for="ojn in fileOJNInput">
-						{{ ojn.name }}
+						<span v-if="finished.includes(ojn.name)"></span>
+						<span v-else>{{ ojn.name }}</span>
 					</div>
 				</div>
 				<div class="pt-4">File Count : {{ fileOJNInput?.length }}</div>
@@ -334,6 +335,7 @@ const updatingOJNList = ref<OJNList>()
 
 const uploadOJNModal = ref(false)
 const fileOJNInput = ref<File[]>()
+const finished = ref<string[]>([])
 
 const deleteModal = ref(false)
 const renameModal = ref(false)
@@ -588,24 +590,32 @@ const updateOJN = async () => {
 	const asyncOperation = (ojn: File) => {
 		return new Promise<void>(async (resolve) => {
 			const formData = new FormData()
+			const imageData = new FormData()
+			const bmpData = new FormData()
+
 			let uploaded = false
 			let upload_error: FetchError | null = null
 			let file_id = ''
 			let upload_url = '/files/content'
+			let upload_now_url = upload_url
 			let checked = false
 			let put_file = false
 			let metadata_updated = false
 			let is_ojn = ojn.name.match(/\.ojn$/i) !== null
 			let upload_passed = false
+			let img_id = ''
+			let bmp_id = ''
+			let img_uploaded = false
+			let bmp_uploaded = false
 
-			let bodyCheck = JSON.stringify({
+			let bodyCheck = {
 				name: ojn.name,
 				parent: {
 					id: server?.folder_id
 				}
-			})
+			}
 
-			formData.append('attributes', bodyCheck)
+			formData.append('attributes', JSON.stringify(bodyCheck))
 			formData.append('file', ojn)
 
 			try {
@@ -614,10 +624,10 @@ const updateOJN = async () => {
 					headers: {
 						authorization: `Bearer ${response.access_token}`
 					},
-					body: bodyCheck,
-					retry: 3,
+					body: JSON.stringify(bodyCheck),
+					retry: 10,
 					retryStatusCodes: [408, 425, 429, 500, 502, 503, 504],
-					retryDelay: 500
+					retryDelay: 5000
 				})
 				checked = true
 			} catch (err) {
@@ -631,22 +641,29 @@ const updateOJN = async () => {
 
 			if (uploaded) {
 				put_file = true
-				upload_url = `/files/${file_id}/content`
+				upload_now_url = `/files/${file_id}/content`
 			}
 
 			if (checked) {
 				try {
-					const uploadResponse: any = await $fetch(`${boxUploadAPI}${upload_url}`, {
+					const uploadResponse: any = await $fetch(`${boxUploadAPI}${upload_now_url}`, {
 						method: 'POST',
 						headers: {
 							authorization: `Bearer ${response.access_token}`
 						},
 						body: formData,
-						retry: 3,
-						retryDelay: 1000
+						retry: 10,
+						retryDelay: 5000,
+						query: {
+							fields: 'metadata.enterprise.ojn.img,metadata.enterprise.ojn.bmp'
+						}
 					})
-					const [firstEntry] = uploadResponse.entries
-					file_id = firstEntry.id
+					const [ojnEntry] = uploadResponse.entries
+					file_id = ojnEntry.id
+					if (put_file && is_ojn) {
+						img_id = ojnEntry.metadata.enterprise.ojn.img
+						bmp_id = ojnEntry.metadata.enterprise.ojn.bmp
+					}
 
 					uploaded = true
 					upload_passed = true
@@ -674,8 +691,71 @@ const updateOJN = async () => {
 					note_hx: header.difficulty.hard.note_count,
 					time_ex: header.difficulty.easy.duration,
 					time_nx: header.difficulty.normal.duration,
-					time_hx: header.difficulty.hard.duration
+					time_hx: header.difficulty.hard.duration,
+					img: '',
+					bmp: ''
 				}
+				let image_name = `o2ma${header.song_id}.png`
+				let bmp_name = `o2ma${header.song_id}.bmp`
+
+				bodyCheck.name = image_name
+				imageData.append('attributes', JSON.stringify(bodyCheck))
+				imageData.append('file', new Blob([header.image]), image_name)
+
+				if (!put_file) {
+					upload_now_url = upload_url
+				} else {
+					upload_now_url = `/files/${img_id}/content`
+				}
+
+				try {
+					const uploadResponse: any = await $fetch(`${boxUploadAPI}${upload_now_url}`, {
+						method: 'POST',
+						headers: {
+							authorization: `Bearer ${response.access_token}`
+						},
+						body: imageData,
+						retry: 5,
+						retryDelay: 5000
+					})
+					const [imgEntry] = uploadResponse.entries
+					img_id = imgEntry.id
+					bodyMetadata.img = img_id
+
+					img_uploaded = true
+				} catch (err) {
+					upload_error = err as FetchError
+				}
+
+				bodyCheck.name = bmp_name
+				bmpData.append('attributes', JSON.stringify(bodyCheck))
+				bmpData.append('file', new Blob([header.bmp]), bmp_name)
+
+				if (!put_file) {
+					upload_now_url = upload_url
+				} else {
+					upload_now_url = `/files/${bmp_id}/content`
+				}
+
+				try {
+					const uploadResponse: any = await $fetch(`${boxUploadAPI}${upload_now_url}`, {
+						method: 'POST',
+						headers: {
+							authorization: `Bearer ${response.access_token}`
+						},
+						body: bmpData,
+						retry: 10,
+						retryDelay: 5000
+					})
+					const [bmpEntry] = uploadResponse.entries
+					bmp_id = bmpEntry.id
+					bodyMetadata.bmp = bmp_id
+
+					bmp_uploaded = true
+				} catch (err) {
+					upload_error = err as FetchError
+				}
+
 				if (!put_file) {
 					try {
 						await $fetch(`${boxAPI}/files/${file_id}/metadata/enterprise/ojn`, {
@@ -705,7 +785,9 @@ const updateOJN = async () => {
 								authorization: `Bearer ${response.access_token}`,
 								'Content-Type': 'application/json-patch+json'
 							},
-							body: JSON.stringify(output)
+							body: JSON.stringify(output),
+							retry: 10,
+							retryDelay: 5000
 						})
 						metadata_updated = true
 					} catch (err) {
@@ -714,8 +796,9 @@ const updateOJN = async () => {
 				}
 			}
 
-			if ((is_ojn && upload_passed && metadata_updated) || (upload_passed && !is_ojn)) {
+			if ((is_ojn && upload_passed && img_uploaded && bmp_uploaded && metadata_updated) || (upload_passed && !is_ojn)) {
 				now.value++
+				finished.value.push(ojn.name)
 				resolve()
 			} else {
 				toast.add({
@@ -733,6 +816,8 @@ const updateOJN = async () => {
 	const promises = fileArray.map((ojn) => limit(() => asyncOperation(ojn)))
 
 	await Promise.all(promises)
+
+	finished.value = []
 
 	loading.value = false
 	uploadOJNModal.value = false

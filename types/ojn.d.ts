@@ -20,6 +20,8 @@ interface OJNHeader {
 	ojm_file: string
 	cover_size: number
 	cover_offset: number
+	image: Buffer
+	bmp: Buffer
 }
 
 interface Difficulty {
