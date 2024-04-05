@@ -1,93 +1,145 @@
 <template>
-	<ClientOnly>
-		<UCard
-			:ui="{
-				body: {
-					padding: ''
-				}
-			}"
+	<UCard
+		:ui="{
+			body: {
+				padding: ''
+			}
+		}"
+	>
+		<UCommandPalette
+			:groups="searchResult"
+			:autoselect="false"
+			:autoclear="false"
+			:close-button="{ icon: 'i-heroicons-x-mark-20-solid', color: 'gray', variant: 'link', padded: false }"
+			:ui="{ wrapper: ' divide-y-0' }"
+			:debounce="500"
+			placeholder="Search Database... example: lv>100 nx<20 bpm=200"
 		>
-			<UCommandPalette
-				:groups="searchResult"
-				:autoselect="false"
-				:autoclear="false"
-				:close-button="{ icon: 'i-heroicons-x-mark-20-solid', color: 'gray', variant: 'link', padded: false }"
-				:ui="{ wrapper: ' divide-y-0' }"
-				:debounce="500"
-				placeholder="Search Database... example: lv>100 nx<20 bpm=200"
-			>
-				<template #empty-state>
-					<div></div>
-				</template>
-			</UCommandPalette>
-		</UCard>
-		<div class="flex justify-between pt-4">
-			<UPagination
-				:prev-button="{ icon: 'i-heroicons-arrow-small-left-20-solid', label: 'Prev', color: 'gray' }"
-				:next-button="{ icon: 'i-heroicons-arrow-small-right-20-solid', trailing: true, label: 'Next', color: 'gray' }"
-				v-model="page"
-				:total="allCount"
-				:page-count="limit"
-				show-last
-				show-first
-				:disabled="searching"
-			/>
-			<div class="flex items-center">
-				<p class="pr-4">Per page</p>
-				<USelect size="sm" v-model="limit" :options="['30', '50', '100', '200']" />
-			</div>
+			<template #empty-state>
+				<div></div>
+			</template>
+		</UCommandPalette>
+	</UCard>
+	<div class="flex justify-between pt-4">
+		<UPagination
+			class="pb-4"
+			:prev-button="{ icon: 'i-heroicons-arrow-small-left-20-solid', label: 'Prev', color: 'gray' }"
+			:next-button="{ icon: 'i-heroicons-arrow-small-right-20-solid', trailing: true, label: 'Next', color: 'gray' }"
+			v-model="page"
+			:total="allCount"
+			:page-count="limit"
+			show-last
+			show-first
+			:disabled="searching"
+		/>
+		<div>
+			<USelect size="sm" v-model="limit" :options="['30', '50', '100', '200']" icon="i-heroicons-list-bullet" />
 		</div>
+	</div>
 
-		<UTable
-			class="pt-4"
-			:rows="result"
-			:columns="ojnColumns"
-			:loading-state="{ icon: 'i-heroicons-arrow-path-20-solid', label: 'Loading...' }"
-			:loading="searching"
-			:ui="{ td: { base: '', color: 'text-black dark:text-gray-200' } }"
-		>
-			<template #img-data="{ row }">
-				<UPopover mode="hover" :popper="{ placement: 'right' }">
+	<div class="grid lg:grid-cols-2 gap-3">
+		<UCard class="group max-h-[140px]" v-for="chart in result" :ui="{ body: { padding: '' } }">
+			<div class="flex relative">
+				<img
+					class="absolute rounded-l-md h-[140px] min-w-[186px]"
+					:src="getImage(chart.metadata.enterprise.ojn.img, chart.metadata.enterprise.ojn.bmp)"
+				/>
+				<div class="h-[140px] min-w-[186px] z-10 flex flex-row-reverse">
+					<div class="pt-2 pr-2">
+						<UTooltip text="o2maID">
+							<UBadge
+								color="white"
+								class="opacity-70 hover:opacity-100 transition"
+								size="xs"
+								:label="chart.metadata.enterprise.ojn.id"
+							/>
+						</UTooltip>
+					</div>
+				</div>
+
+				<div class="flex relative w-full bg-gradient-to-r from-gray-900 rounded-md -ml-1">
 					<img
-						loading="lazy"
-						class="h-20 w-auto min-w-20"
-						alt=""
-						:src="getImage(row.metadata.enterprise.ojn.img, row.metadata.enterprise.ojn.bmp)"
-						@error="test"
+						class="absolute object-cover w-full h-[140px] opacity-10 rounded-md"
+						:src="imageList.get(chart.metadata.enterprise.ojn.img)"
 					/>
-					<template #panel>
-						<div class="p-4">
-							<img :src="imageList.get(row.metadata.enterprise.ojn.img)" />
+					<div class="flex flex-col justify-between w-full relative p-2">
+						<div class="z-10">
+							<div class="font-bold">
+								{{ chart.metadata.enterprise.ojn.title }}
+							</div>
+							<div class="font-bold text-sm">by {{ chart.metadata.enterprise.ojn.artist }}</div>
 						</div>
-					</template>
-				</UPopover>
-			</template>
-			<template #view-data="{ row }">
-				<UButton variant="ghost" icon="i-heroicons-eye-solid" @click="openOJNViewer(row)" />
-			</template>
-			<template #download-data="{ row }">
-				<UButton variant="ghost" icon="i-heroicons-arrow-down-tray" @click="downloadChart(row)" />
-			</template>
-		</UTable>
+						<div class="z-10">
+							<div class="leading-none text-sm">
+								<span class="text-gray-400">charted by </span>
+								<span class="font-bold text-gray-200">{{ chart.metadata.enterprise.ojn.noter }}</span>
+							</div>
+							<div class="flex gap-4">
+								<UTooltip text="Time / Duration" class="flex text-xs items-center">
+									<UIcon name="i-heroicons-clock-solid" />
+									<div class="">{{ fancyTimeFormat(chart.metadata.enterprise.ojn.time_hx) }}</div>
+								</UTooltip>
+								<UTooltip text="BPM" class="flex text-xs items-center">
+									<UIcon name="i-heroicons-chevron-double-up-solid" />
+									<div class="">{{ chart.metadata.enterprise.ojn.bpm }}</div>
+								</UTooltip>
+								<UTooltip text="Notes" class="flex text-xs items-center">
+									<UIcon name="i-mdi-music-note" dynamic />
+									<div class="">{{ chart.metadata.enterprise.ojn.note_hx }}</div>
+								</UTooltip>
+							</div>
+							<div class="flex justify-between pt-1">
+								<UTooltip text="Server">
+									<UBadge :label="chart.parent.name" />
+								</UTooltip>
 
-		<div class="flex justify-center py-8">
-			<UPagination
-				:prev-button="{ icon: 'i-heroicons-arrow-small-left-20-solid', label: 'Prev', color: 'gray' }"
-				:next-button="{ icon: 'i-heroicons-arrow-small-right-20-solid', trailing: true, label: 'Next', color: 'gray' }"
-				v-model="page"
-				:total="allCount"
-				:page-count="limit"
-				show-last
-				show-first
-				:disabled="searching"
-			/>
-		</div>
-	</ClientOnly>
+								<div class="flex gap-1">
+									<UTooltip text="Level Easy / EX">
+										<UBadge color="green" :label="chart.metadata.enterprise.ojn.level_ex" />
+									</UTooltip>
+									<UTooltip text="Level Normal / HX">
+										<UBadge color="yellow" :label="chart.metadata.enterprise.ojn.level_nx" />
+									</UTooltip>
+									<UTooltip text="Level Hard / HX">
+										<UBadge color="red" :label="chart.metadata.enterprise.ojn.level_hx" />
+									</UTooltip>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div
+					class="flex-col justify-center items-center space-y-4 flex transition-all opacity-0 group-hover:opacity-100 group-hover:w-16 w-2"
+				>
+					<UTooltip text="Preview Notes">
+						<UButton variant="ghost" icon="i-heroicons-eye-solid" @click="openOJNViewer(chart)" />
+					</UTooltip>
+					<UTooltip text="Download">
+						<UButton variant="ghost" icon="i-heroicons-arrow-down-tray" @click="downloadChart(chart)" />
+					</UTooltip>
+				</div>
+			</div>
+		</UCard>
+	</div>
+
+	<div class="flex justify-center py-8">
+		<UPagination
+			:prev-button="{ icon: 'i-heroicons-arrow-small-left-20-solid', label: 'Prev', color: 'gray' }"
+			:next-button="{ icon: 'i-heroicons-arrow-small-right-20-solid', trailing: true, label: 'Next', color: 'gray' }"
+			v-model="page"
+			:total="allCount"
+			:page-count="limit"
+			show-last
+			show-first
+			:disabled="searching"
+		/>
+	</div>
 </template>
 
 <script setup lang="ts">
 import { FetchError } from 'ofetch'
-
+const user = useSupabaseUser()
+const toast = useToast()
 useHead({
 	title: `Search - OJN Database`,
 	meta: [{ name: 'description', content: `Search and download .ojn/.ojm files` }]
@@ -150,7 +202,6 @@ const searchResult = [
 	}
 ]
 
-const toast = useToast()
 const result = ref()
 const page = ref(1)
 const allCount = ref(0)
@@ -163,6 +214,15 @@ const token = ref('')
 const imageList = ref(new Map<string, string>())
 
 onMounted(async () => {
+	if (!user.value) {
+		toast.add({
+			title: `Please Login with Discord`,
+			icon: 'i-heroicons-x-circle-16-solid',
+			color: 'red'
+		})
+		await navigateTo('/')
+		return
+	}
 	const response = await $fetch(`/api/token`, {
 		retry: 3,
 		retryStatusCodes: [400]
@@ -245,8 +305,7 @@ const searchOJN = async (q: string, reset: boolean) => {
 						}
 					]
 				],
-				fields:
-					'parent,metadata.enterprise.ojn.id,metadata.enterprise.ojn.title,metadata.enterprise.ojn.artist,metadata.enterprise.ojn.noter,metadata.enterprise.ojn.level_hx,metadata.enterprise.ojn.bpm,metadata.enterprise.ojn.bmp,metadata.enterprise.ojn.img',
+				fields: 'parent,metadata.enterprise.ojn',
 				offset: (page.value - 1) * limit.value,
 				limit: limit.value
 			}

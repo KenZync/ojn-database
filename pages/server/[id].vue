@@ -323,11 +323,6 @@ const ojnlist = ref<OJNList>()
 const fileOJNListInput = ref<HTMLInputElement>()
 const formOJNList = ref<HTMLFormElement>()
 
-const ojnlistID = computed(() => {
-	if (channels.value?.length! > 0) {
-		return channels.value![selectedChannel.value].ojn_list_file_id
-	}
-})
 const selectedChannel = ref(Number(route.query.channel) || 0)
 
 const updateOJNListModal = ref(false)
@@ -397,8 +392,20 @@ const { data: server } = await client.from('ojn_servers').select().eq('id', rout
 
 const { data: channels, refresh: refreshChannel } = await useAsyncData('ojn_channels', async () => {
 	const { data } = await client.from('ojn_channels').select().eq('server_id', route.params.id)
-
 	return data
+})
+
+if (!channels.value?.[selectedChannel.value]) {
+	throw createError({
+		statusCode: 404,
+		statusMessage: 'Page Not Found'
+	})
+}
+
+const ojnlistID = computed(() => {
+	if (channels.value?.length! > 0) {
+		return channels.value![selectedChannel.value].ojn_list_file_id
+	}
 })
 
 const updateTabs = [
