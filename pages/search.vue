@@ -36,6 +36,10 @@
 			<USelect size="sm" v-model="limit" :options="['30', '50', '100', '200']" icon="i-heroicons-list-bullet" />
 		</div>
 	</div>
+	<div class="flex justify-center">
+		<UButton v-if="searching" loading variant="ghost" color="white" size="xl" />
+		<UButton v-if="!searching && !result.length" disabled variant="ghost" color="white" size="xl" label="No Data" />
+	</div>
 
 	<div class="grid lg:grid-cols-2 gap-3">
 		<UCard class="group max-h-[140px]" v-for="chart in result" :ui="{ body: { padding: '' } }">
